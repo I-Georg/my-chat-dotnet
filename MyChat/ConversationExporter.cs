@@ -38,15 +38,28 @@
             /// <summary>
             /// The conversation is exported as json
             /// </summary>
+             // Console.WriteLine(agentsStatus_1);
             conversationExporter.ReadConversation(configuration.inputFilePath);
-            Conversation c = conversationExporter.ReadConversation(configuration.inputFilePath);
+            Message c = conversationExporter.ReadConversation(configuration.inputFilePath);
+            //Construct the Pipeline object
+            MessageSelectionPipeline messageStatusPipeline = new MessageSelectionPipeline();
+
+            //Register the filters to be executed
+            messageStatusPipeline.Register(new FindUserFilter())
+                .Register(new SearchWordFilter())
+               /* .Register(new RedactWordFiltercs())*/;
+            //Start pipeline processing
+            var agentsStatus_1 = messageStatusPipeline.Process(Message.Messag);
+
             conversationExporter.WriteConversation(c, configuration.outputFilePath);
             conversationExporter.ExportConversation(configuration.inputFilePath, configuration.outputFilePath);
-            conversationExporter.FindUser(c, configuration.user);
-            conversationExporter.SearchWord(c, configuration.user);
-            conversationExporter.RedactWord(c, configuration.blacklistPath, configuration.redactedConversationPath);
+            //conversationExporter.FindUser(c, configuration.user);
+            //conversationExporter.SearchWord(c, configuration.user);
+            //conversationExporter.RedactWord(c, configuration.blacklistPath, configuration.redactedConversationPath);
 
         }
+
+    
 
         /// <summary>
         /// Exports the conversation at <paramref name="inputFilePath"/> as JSON to <paramref name="outputFilePath"/>.
@@ -66,7 +79,7 @@
         public void ExportConversation(string inputFilePath, string outputFilePath)
         {
 
-            Conversation conversation = this.ReadConversation(inputFilePath);
+           Message conversation = this.ReadConversation(inputFilePath);
 
             this.WriteConversation(conversation, outputFilePath);
 
@@ -88,7 +101,7 @@
         /// <exception cref="Exception">
         /// Thrown when something else went wrong.
         /// </exception>
-        public Conversation ReadConversation(string inputFilePath)
+        public Message ReadConversation(string inputFilePath)
         {
             //try
             //{
@@ -106,62 +119,63 @@
                 MatchCollection matches = Regex.Matches(line, rx);
                 foreach (Match match in matches)
                 {
-                    Console.WriteLine(match.Groups[3].Value);
+                    // Console.WriteLine(match.Groups[3].Value);
                     messagez.Add(new Message(DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(match.Groups[1].Value)), match.Groups[2].Value, match.Groups[3].Value)); //doesn't add the messages to the object and as a result - null value and breaks the code
                 }
 
-            }
-
-            return new Conversation(conversationName, messagez); //not recognised by the method if try/catch is on 
 
             }
 
+            return new Message(DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(messagez.Select(x => x.timestamp))), messagez.Select(x => x.senderId).ToString(), messagez.Select(x => x.content).ToString()); //not recognised by the method if try/catch is on 
 
-            //catch (FileNotFoundException)
-            //{
-            //    throw new ArgumentException("The file was not found.");
-            //}
-            //catch (IOException)
-            //{
-            //    throw new Exception("Something went wrong in the IO.");
-            //}
-            //catch (System.IndexOutOfRangeException)
-            //{
-            //    throw new ArgumentException("Outside the bounds of the array");
-            //}
-            //catch (RankException)
-            //{
-            //    Console.WriteLine("Array with wrong number of items is passed to the method");
-            //}
-
-            //catch (EndOfStreamException)
-            //{
-            //    Console.WriteLine("Trying to read past the ecnd of the file");
-            //}
-            //catch (FileLoadException)
-            //{
-            //    Console.WriteLine("File cannot load");
-            //}
-
-       // }
+        }
 
 
-/// <summary>
-/// Helper method to write the <paramref name="conversation"/> as JSON to <paramref name="outputFilePath"/>.
-/// </summary>
-/// <param name="conversation">
-/// The conversation.
-/// </param>
-/// <param name="outputFilePath">
-/// The output file path.
-/// </param>
-/// <exception cref="ArgumentException">
-/// Thrown when there is a problem with the <paramref name="outputFilePath"/>.
-/// </exception>
-/// <exception cref="Exception">
-/// Thrown when something else bad happens.
-/// </exception>
-public void WriteConversation(Conversation conversation, string outputFilePath)
+        //catch (FileNotFoundException)
+        //{
+        //    throw new ArgumentException("The file was not found.");
+        //}
+        //catch (IOException)
+        //{
+        //    throw new Exception("Something went wrong in the IO.");
+        //}
+        //catch (System.IndexOutOfRangeException)
+        //{
+        //    throw new ArgumentException("Outside the bounds of the array");
+        //}
+        //catch (RankException)
+        //{
+        //    Console.WriteLine("Array with wrong number of items is passed to the method");
+        //}
+
+        //catch (EndOfStreamException)
+        //{
+        //    Console.WriteLine("Trying to read past the ecnd of the file");
+        //}
+        //catch (FileLoadException)
+        //{
+        //    Console.WriteLine("File cannot load");
+        //}
+
+        // }
+
+
+        /// <summary>
+        /// Helper method to write the <paramref name="conversation"/> as JSON to <paramref name="outputFilePath"/>.
+        /// </summary>
+        /// <param name="conversation">
+        /// The conversation.
+        /// </param>
+        /// <param name="outputFilePath">
+        /// The output file path.
+        /// </param>
+        /// <exception cref="ArgumentException">
+        /// Thrown when there is a problem with the <paramref name="outputFilePath"/>.
+        /// </exception>
+        /// <exception cref="Exception">
+        /// Thrown when something else bad happens.
+        /// </exception>
+        public void WriteConversation(Message conversation, string outputFilePath)
     {
         try
         {
@@ -185,264 +199,10 @@ public void WriteConversation(Conversation conversation, string outputFilePath)
         }
 
     }
-        /// <summary>
-        /// Helper method to write the <paramref name="userFind "/> as JSON to <paramref name="path"/>.
-        /// </summary>
-        /// <param name="Userfind method">
-        /// The  find conversation that has been written by  the user method.
-        /// </param>
-        /// <param name="path">
-        /// The output file path - new folder called Userconversation.txt.
-        /// </param>
-        /// <exception cref="ArgumentException">
-        /// Thrown when there is a problem with the <paramref name="path"/>.
-        /// </exception>
-        /// <exception cref="Exception">
-        /// Thrown when something else bad happens.
-        /// </exception>
-        public void FindUser(Conversation conversation, string user)
-        {
-            try
-            {
-                var serialized = JsonConvert.SerializeObject(conversation, Formatting.Indented);
-                //deserialise object
-                Conversation deserialisedChato = JsonConvert.DeserializeObject<Conversation>(serialized);
-                Console.WriteLine(deserialisedChato.messages);
-                //loop through messages
-                foreach (var value in deserialisedChato.messages)
-                {
-                    //if the sender is the same as the command line argument,convert to json,write the result to file - values are multiplied because the previous method Read is not  showing everything(to be redacted)
-                    //if (value.SenderId == user)
-                    //{
-                    var result = value.content;
+        
+        
 
-                    //convert to json
-                    JObject convertToJson = new JObject(
-                        new JProperty("Result",
-                        new JObject(
-                        new JProperty("User", value.senderId),
-                        new JProperty("Message", value.content))));
-
-                    string path = Environment.CurrentDirectory + "\\" + "userConversation.txt";
-                    //write to file
-                    System.IO.File.AppendAllText(path, convertToJson.ToString());
-                    // }
-                    //else
-                    //{
-                    //    Console.WriteLine("a user has not been found");
-                    //}
-                }
-            }
-            catch (DirectoryNotFoundException)
-            {
-                throw new ArgumentException("Path invalid.");
-            }
-            catch (FormatException)
-            {
-                throw new ArgumentException("String for user was not in the correct format");
-
-            }
-            catch (SecurityException)
-            {
-                throw new ArgumentException("No permission to file.");
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine("File is not found");
-            }
-            catch (FieldAccessException)
-            {
-                Console.WriteLine("Trying to access a private or protected field");
-            }
-            catch (EndOfStreamException)
-            {
-                Console.WriteLine("Trying to read past the ecnd of the file");
-            }
-            catch (FileLoadException)
-            {
-                Console.WriteLine("File cannot load");
-            }
-
-        }
-
-        /// <summary>
-        /// Helper method to write the <paramref name="SearchWord "/> as JSON to <paramref name="path"/>.
-        /// </summary>
-        /// <param name="SearchWord method">
-        /// Find a conversation that has the word specified as a command -line argument
-        /// </param>
-        /// <param name="path">
-        /// The output file path - new folder called userConversation.txt.
-        /// </param>
-        /// <exception cref="ArgumentException">
-        /// Thrown when there is a problem with the <paramref name="path"/>.
-        /// </exception>
-        /// <exception cref="Exception">
-        /// Thrown when something else bad happens.
-        /// </exception>
-        public void SearchWord(Conversation conversation, string word)
-        {
-            try
-            {
-                Console.WriteLine(conversation.name);
-                var serialized = JsonConvert.SerializeObject(conversation, Formatting.Indented);
-                //deserialise object
-                Conversation deserialisedChat = JsonConvert.DeserializeObject<Conversation>(serialized);
-                //LINQ - if the messages contain the word from the command-line argument,select the messages
-                var messageList = from x in deserialisedChat.messages
-                                  where x.content.Contains(word)
-                                  select x;
-                //build them into strings
-                StringBuilder sb = new StringBuilder();
-                foreach (Message x in messageList)
-                {
-                    if (x.content.Contains(word))
-                    {
-                        sb.Append("UserName: " + x.senderId + "Message: " + x.content);
-                        //convert to json
-                        JObject convertWordToJson = new JObject(
-                            new JProperty("Result",
-                            new JObject(
-                            new JProperty("User", x.senderId),
-                            new JProperty("Message", x.content))));
-                        string path = Environment.CurrentDirectory + "\\" + "userConversation.txt";
-                        //write to file
-                        System.IO.File.AppendAllText(path, convertWordToJson.ToString());
-                    }
-                    else
-                    {
-                        Console.WriteLine(" The word  is not found in any conversation");
-                    }
-                }
-
-            }
-            catch (DirectoryNotFoundException)
-            {
-                throw new ArgumentException("Path invalid.");
-            }
-            catch (ArgumentException)
-            {
-                Console.WriteLine("Wrong arguments are provided,Please check your order of argumnets");
-            }
-            catch (NullReferenceException)
-            {
-                Console.WriteLine(" A null object is being referenced");
-            }
-            catch (SecurityException)
-            {
-                throw new ArgumentException("No permission to file.");
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine("File is not found");
-            }
-            catch (FieldAccessException)
-            {
-                Console.WriteLine("Trying to access a private or protected field");
-            }
-            catch (EndOfStreamException)
-            {
-                Console.WriteLine("Trying to read past the ecnd of the file");
-            }
-            catch (FileLoadException)
-            {
-                Console.WriteLine("File cannot load");
-            }
-
-        }
-
-        /// <summary>
-        /// Helper method to write the <paramref name=RedactWord "/>  to <paramref name="RedactConversationPath"/>.
-        /// </summary>
-        /// <param name="RedactWord method">
-        /// Find a conversation that has the word specified from blacklist and redact it
-        /// </param>
-        /// <param name="path">
-        /// The output file path - new file called redactConversation.txt.
-        /// </param>
-        /// <exception cref="ArgumentException">
-        /// Thrown when there is a problem with the <paramref name="path"/>.
-        /// </exception>
-        /// <exception cref="Exception">
-        /// Thrown when something else bad happens.
-        /// </exception>
-        public void RedactWord(Conversation conversation, string blacklistPath, string redactedConversationPath)
-        {
-            try
-            {
-                //create a list that holds the blacklist words
-                List<string> blacklist = new List<string>();
-                // read the blacklist file
-                string[] lines = File.ReadAllLines(blacklistPath);
-                //add words to the list
-                foreach (string line in lines)
-                {
-                    blacklist.Add(line);
-
-                }
-                var serialized = JsonConvert.SerializeObject(conversation, Formatting.Indented);
-                //deserialise object
-                Conversation deserialisedChat = JsonConvert.DeserializeObject<Conversation>(serialized);
-                //loop through blacklist,check if it contains bad word
-                foreach (string blacklistWord in blacklist)
-                {
-                    var listRedacted = from j in deserialisedChat.messages
-                                       where j.content.Contains(blacklistWord)
-                                       select j;
-                    //check if listRedacted does not contain any blacklisted words - needs to be better
-                    //if (listRedacted != null)
-                    //{
-                    StringBuilder sb2 = new StringBuilder();
-                    foreach (Message toBeRedacted in listRedacted)
-                    {
-                        sb2.Append("UserName: " + toBeRedacted.senderId + "Message: " + toBeRedacted.content);
-                        // var r = sb3.Replace(blacklistWord, "*redacted*");
-                        //Console.WriteLine(r);
-                        File.AppendAllText(redactedConversationPath, sb2.Replace(blacklistWord, "*redacted*").ToString());
-                    }
-                    // }
-                    //else    // breaks
-                    //    {
-                    //        Console.WriteLine("No words on the blacklist in the conversation");
-                    //    }
-                }
-
-            }
-            catch (DirectoryNotFoundException)
-            {
-                throw new ArgumentException("Path invalid.");
-            }
-            catch (SecurityException)
-            {
-                throw new ArgumentException("No permission to file.");
-            }
-            catch (ArgumentException)
-            {
-                Console.WriteLine("Wrong arguments are provided,Please check your order of argumnets");
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine("File is not found");
-            }
-            catch (FieldAccessException)
-            {
-                Console.WriteLine("Trying to access a private or protected field");
-            }
-            catch (NullReferenceException)
-            {
-                Console.WriteLine("Trying to reference a null object");
-            }
-            catch (EndOfStreamException)
-            {
-                Console.WriteLine("Trying to read past the ecnd of the file");
-            }
-            catch (FileLoadException)
-            {
-                Console.WriteLine("File cannot load");
-            }
-
-        }
-
+      
         /// <summary> needs more work
         /// Helper method to write the <paramref name=RedactCard "/>  to <paramref name="RedactConversationPath"/>.
         /// </summary>
@@ -500,5 +260,4 @@ public void WriteConversation(Conversation conversation, string outputFilePath)
         //    }
 
         //}
-    }
-}
+    }}
